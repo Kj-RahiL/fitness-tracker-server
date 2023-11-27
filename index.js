@@ -27,6 +27,33 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         // await client.connect();
 
+        const userCollection = client.db('fitnessDB').collection("users")
+        const subscribeCollection = client.db('fitnessDB').collection("subscribe")
+
+        // users api
+        app.post('/users', async(req,res)=>{
+            const user = req.body
+            const query = {email: user.email}
+            const existingUser = await userCollection.findOne(query)
+            if(existingUser){
+                return res.send({message: "user already exists", insertedId: null})
+            }
+            const result = await userCollection.insertOne(user)
+            res.send(result)
+        })
+
+        // newsletter api
+        app.post('/subscribe', async(req,res)=>{
+            const user = req.body
+            const query = {email: user.email}
+            const existingUser = await subscribeCollection.findOne(query)
+            console.log(user, existingUser)
+            if(existingUser){
+                return res.send({message: "already subscribe", insertedId: null})
+            }
+            const result = await subscribeCollection.insertOne(user)
+            res.send(result)
+        })
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
