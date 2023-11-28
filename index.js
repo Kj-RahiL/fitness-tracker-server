@@ -127,6 +127,11 @@ async function run() {
             const result = await trainerCollection.findOne(query)
             res.send(result)
         })
+         app.post('/trainer', verifyToken, async (req, res) => {
+            const trainer = req.body;
+            const result = await trainerCollection.insertOne(trainer)
+            res.send(result)
+        })
 
 
         //Be trainer related api
