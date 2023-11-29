@@ -88,6 +88,20 @@ async function run() {
             res.send({ admin })
         })
 
+        app.get('/users/trainer/:email', verifyToken, async (req, res) => {
+            const email = req.params.email
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'unauthorized access' })
+            }
+            const query = { email: email }
+            const user = await userCollection.findOne(query)
+            let trainer = false
+            if (user) {
+                admin = user?.role === 'trainer'
+            }
+            res.send({ trainer })
+        })
+
         app.post('/users', async (req, res) => {
             const user = req.body
             const query = { email: user.email }
