@@ -32,6 +32,7 @@ async function run() {
         const subscribeCollection = client.db('fitnessDB').collection("subscribe")
         const trainerCollection = client.db('fitnessDB').collection("trainer")
         const beTrainerCollection = client.db('fitnessDB').collection("beTrainer")
+        const classCollection = client.db('fitnessDB').collection("class")
 
         // jwt token
         app.post('/jwt', async (req, res) => {
@@ -97,11 +98,12 @@ async function run() {
             const user = await userCollection.findOne(query)
             let trainer = false
             if (user) {
-                admin = user?.role === 'trainer'
+                trainer = user?.role === 'trainer'
             }
             res.send({ trainer })
         })
 
+        
         app.post('/users', async (req, res) => {
             const user = req.body
             const query = { email: user.email }
@@ -112,7 +114,19 @@ async function run() {
             const result = await userCollection.insertOne(user)
             res.send(result)
         })
-
+        
+        app.patch('/users/trainer/:email', async(req, res) => {
+            const email = req.params.email
+            const filter = {email : email}
+            console.log(filter)
+            const updateDoc = {
+                $set: {
+                    role: 'trainer'
+                }
+            }
+            const result = await userCollection.updateOne(filter, updateDoc)
+            res.send(result)
+        })
         // newsletter api
         app.get('/subscribe', async (req, res) => {
             const result = await subscribeCollection.find().toArray()
@@ -141,7 +155,7 @@ async function run() {
             const result = await trainerCollection.findOne(query)
             res.send(result)
         })
-         app.post('/trainer', verifyToken, async (req, res) => {
+        app.post('/trainer', verifyToken, async (req, res) => {
             const trainer = req.body;
             const result = await trainerCollection.insertOne(trainer)
             res.send(result)
@@ -166,6 +180,17 @@ async function run() {
             res.send(result)
         })
 
+        // add class api
+        app.post('/addClass', async(req,res)=>{
+            const addClass = req.body;
+            const result = await classCollection.insertOne(addClass)
+            res.send(result)
+        })
+
+        app.get('/addClass', async(req, res)=>{
+            const result = await classCollection.find().toArray()
+            res.send(result)
+        })
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
