@@ -73,7 +73,7 @@ async function run() {
         }
 
         // users api
-        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+        app.get('/users', verifyToken, async (req, res) => {
             const result = await userCollection.find().toArray()
             res.send(result)
         })
