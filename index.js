@@ -33,6 +33,7 @@ async function run() {
         const trainerCollection = client.db('fitnessDB').collection("trainer")
         const beTrainerCollection = client.db('fitnessDB').collection("beTrainer")
         const classCollection = client.db('fitnessDB').collection("class")
+        const forumCollection = client.db('fitnessDB').collection("forum")
 
         // jwt token
         app.post('/jwt', async (req, res) => {
@@ -70,7 +71,7 @@ async function run() {
         }
 
         // users api
-        app.get('/users', async (req, res) => {
+        app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
             const result = await userCollection.find().toArray()
             res.send(result)
         })
@@ -103,7 +104,7 @@ async function run() {
             res.send({ trainer })
         })
 
-        
+
         app.post('/users', async (req, res) => {
             const user = req.body
             const query = { email: user.email }
@@ -114,10 +115,10 @@ async function run() {
             const result = await userCollection.insertOne(user)
             res.send(result)
         })
-        
-        app.patch('/users/trainer/:email', async(req, res) => {
+
+        app.patch('/users/trainer/:email', async (req, res) => {
             const email = req.params.email
-            const filter = {email : email}
+            const filter = { email: email }
             console.log(filter)
             const updateDoc = {
                 $set: {
@@ -181,16 +182,53 @@ async function run() {
         })
 
         // add class api
-        app.post('/addClass', async(req,res)=>{
+        app.post('/addClass', async (req, res) => {
             const addClass = req.body;
             const result = await classCollection.insertOne(addClass)
             res.send(result)
         })
 
-        app.get('/addClass', async(req, res)=>{
+        app.get('/addClass', async (req, res) => {
             const result = await classCollection.find().toArray()
             res.send(result)
         })
+
+        // forum related api
+        app.get('/forum', async (req, res) => {
+            const result = await forumCollection.find().toArray()
+            res.send(result)
+        })
+        app.post('/forum', async (req, res) => {
+            const addClass = req.body;
+            const result = await forumCollection.insertOne(addClass)
+            res.send(result)
+        })
+
+        app.put('/forum/upvote/:id', async (req, res) => {
+            const id = req.params.id
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedPost = {
+                $inc: {
+                    upVotes: 1
+                }
+            }
+            const result = await forumCollection.updateOne(filter, updatedPost, options)
+            res.send(result)
+        });
+
+        app.put('/forum/downvote/:id', async (req, res) => {
+            const id = req.params.id
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedPost = {
+                $inc: {
+                    downVotes: 1
+                }
+            }
+            const result = await forumCollection.updateOne(filter, updatedPost, options)
+            res.send(result)
+        });
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
