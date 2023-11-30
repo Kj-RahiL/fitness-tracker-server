@@ -3,6 +3,7 @@ require('dotenv').config()
 const jwt = require('jsonwebtoken');
 const app = express()
 const cors = require('cors');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
 
 const port = process.env.PORT || 5000;
@@ -34,6 +35,7 @@ async function run() {
         const beTrainerCollection = client.db('fitnessDB').collection("beTrainer")
         const classCollection = client.db('fitnessDB').collection("class")
         const forumCollection = client.db('fitnessDB').collection("forum")
+        const paymentCollection = client.db('fitnessDB').collection("payment")
 
         // jwt token
         app.post('/jwt', async (req, res) => {
@@ -229,6 +231,34 @@ async function run() {
             const result = await forumCollection.updateOne(filter, updatedPost, options)
             res.send(result)
         });
+
+        // payment method
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body
+      const amount = parseInt(price * 100);
+      console.log(amount, 'amount inside the intent')
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+
+      })
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    })
+
+    app.post('/payments', async (req, res) => {
+      const payment = req.body
+      const paymentResult = await paymentCollection.insertOne(payment)
+      res.send(paymentResult);
+    })
+
+    app.get('/payments', verifyToken,verifyAdmin, async (req, res) => {
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result)
+    })
+
 
         // Send a ping to confirm a successful connection
         // await client.db("admin").command({ ping: 1 });
