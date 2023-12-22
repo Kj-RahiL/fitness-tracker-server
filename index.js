@@ -6,14 +6,15 @@ const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 3000;
 // middleware
 app.use(express.json())
 app.use(cors())
 
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uma9m7n.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://
+@cluster0.uma9m7n.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -130,6 +131,14 @@ async function run() {
             const result = await userCollection.updateOne(filter, updateDoc)
             res.send(result)
         })
+
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await userCollection.deleteOne(query)
+            res.send(result)
+        })
+
         // newsletter api
         app.get('/subscribe', async (req, res) => {
             const result = await subscribeCollection.find().toArray()
@@ -233,31 +242,57 @@ async function run() {
         });
 
         // payment method
-    app.post('/create-payment-intent', async (req, res) => {
-      const { price } = req.body
-      const amount = parseInt(price * 100);
-      console.log(amount, 'amount inside the intent')
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amount,
-        currency: 'usd',
-        payment_method_types: ['card']
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body
+            const amount = parseInt(price * 100);
+            console.log(amount, 'amount inside the intent')
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
 
-      })
-      res.send({
-        clientSecret: paymentIntent.client_secret
-      })
-    })
+            })
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        })
 
-    app.post('/payments', async (req, res) => {
-      const payment = req.body
-      const paymentResult = await paymentCollection.insertOne(payment)
-      res.send(paymentResult);
-    })
+        app.post('/payments', async (req, res) => {
+            const payment = req.body
+            const paymentResult = await paymentCollection.insertOne(payment)
+            res.send(paymentResult);
+        })
 
-    app.get('/payments', verifyToken,verifyAdmin, async (req, res) => {
-      const result = await paymentCollection.find(query).toArray();
-      res.send(result)
-    })
+        app.get('/payments', verifyToken, verifyAdmin, async (req, res) => {
+            const result = await paymentCollection.find(query).toArray();
+            res.send(result)
+        })
+
+        // admin stats
+        app.get('/admin-stats', async (req, res) => {
+            const users = await userCollection.estimatedDocumentCount()
+            const trainers = await trainerCollection.estimatedDocumentCount()
+            const subscribers = await subscribeCollection.estimatedDocumentCount()
+
+            const result = await paymentCollection.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenue: {
+                            $sum: '$price'
+                        }
+                    }
+                }
+            ]).toArray()
+            const revenue = result.length > 0 ? result[0].totalRevenue : 0;
+            res.send({
+                users,
+                trainers,
+                subscribers,
+                revenue
+            })
+        })
+
 
 
         // Send a ping to confirm a successful connection
